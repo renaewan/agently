@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agently - The agent who animates your ideas</title>
+    <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            overflow-x: hidden;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0a1a 25%, #2a1235 50%, #3d1a78 75%, #1a0a1a 100%);
+            min-height: 100vh;
+            position: relative;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        body.loaded {
+            opacity: 1;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 1rem 2rem;
+            background: transparent;
+            backdrop-filter: none;
+            border-bottom: none;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo::before {
+            content: "✨";
+            font-size: 1.2rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            opacity: 1;
+        }
+
+        /* Hero Section */
+        .hero {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem 2rem 2rem;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 4rem);
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.25rem;
+            line-height: 1.1;
+            letter-spacing: normal;
+            text-align: center;
+        }
+
+        /* Design Transformation Styles */
+        .design-transformation-container {
+            margin: 1.5rem 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .transformation-canvas {
+            width: 100%;
+            max-width: 700px;
+            height: 400px;
+            background: transparent;
+            position: relative;
+            overflow: visible;
+        }
+
+        .idea-to-design-visualization {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            padding: 20px;
+        }
+
+        .stage {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stage-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .default-message {
+            color: rgba(255, 105, 180, 0.6);
+            font-size: 16px;
+            font-style: italic;
+            text-shadow: 0 0 10px rgba(255, 105, 180, 0.2);
+            text-align: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Design Elements */
+        .design-element {
+            position: absolute;
+            opacity: 0;
+            transform: scale(0) rotate(180deg);
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            filter: blur(10px);
+        }
+
+        .design-element.active {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+            filter: blur(0px);
+        }
+
+        .design-element.morphing {
+            animation: continuousMorph 2s ease-in-out infinite;
+        }
+
+        @keyframes continuousMorph {
+            0%, 100% { 
+                transform: scale(1) rotate(0deg);
+                border-radius: 8px;
+            }
+            25% { 
+                transform: scale(1.1) rotate(5deg);
+                border-radius: 15px;
+            }
+            50% { 
+                transform: scale(0.95) rotate(-3deg);
+                border-radius: 20px;
+            }
+            75% { 
+                transform: scale(1.05) rotate(2deg);
+                border-radius: 12px;
+            }
+        }
+
+        .wireframe-text {
+            color: rgba(255, 105, 180, 0.4);
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            background: rgba(255, 105, 180, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px dashed rgba(255, 105, 180, 0.3);
+        }
+
+        .design-component {
+            background: linear-gradient(135deg, rgba(255, 105, 180, 0.8), rgba(218, 112, 214, 0.8));
+            border-radius: 8px;
+            padding: 12px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .particle-burst {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #FF69B4;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .morphing-shape {
+            position: absolute;
+            background: linear-gradient(45deg, #FF69B4, #DA70D6);
+            border-radius: 50%;
+            animation: morphShape 2s ease-in-out infinite;
+        }
+
+        @keyframes morphShape {
+            0%, 100% { 
+                border-radius: 50%;
+                transform: rotate(0deg) scale(1);
+            }
+            25% { 
+                border-radius: 20%;
+                transform: rotate(90deg) scale(1.2);
+            }
+            50% { 
+                border-radius: 0%;
+                transform: rotate(180deg) scale(0.8);
+            }
+            75% { 
+                border-radius: 30%;
+                transform: rotate(270deg) scale(1.1);
+            }
+        }
+
+        .text-particles {
+            position: absolute;
+            font-size: 14px;
+            color: rgba(255, 105, 180, 0.7);
+            font-family: monospace;
+            pointer-events: none;
+            animation: textFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes textFloat {
+            0%, 100% { 
+                transform: translateY(0px) rotate(0deg) scale(1);
+                opacity: 0.7;
+                filter: blur(0px);
+            }
+            25% { 
+                transform: translateY(-10px) rotate(2deg) scale(1.1);
+                opacity: 0.9;
+                filter: blur(0.5px);
+            }
+            50% { 
+                transform: translateY(-25px) rotate(5deg) scale(0.9);
+                opacity: 1;
+                filter: blur(1px);
+            }
+            75% { 
+                transform: translateY(-15px) rotate(-2deg) scale(1.05);
+                opacity: 0.8;
+                filter: blur(0.3px);
+            }
+        }
+
+        @keyframes flowingLine {
+            0% { 
+                transform: rotate(var(--angle)) scaleX(0);
+                opacity: 0;
+            }
+            20% { 
+                transform: rotate(var(--angle)) scaleX(0.3);
+                opacity: 0.6;
+            }
+            80% { 
+                transform: rotate(var(--angle)) scaleX(1);
+                opacity: 1;
+            }
+            100% { 
+                transform: rotate(var(--angle)) scaleX(1);
+                opacity: 0;
+            }
+        }
+
+
+
+
+
+        .hero p {
+            font-size: clamp(1.1rem, 3vw, 1.5rem);
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 1rem;
+            max-width: 600px;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        /* Start Designing Button */
+        .start-designing-btn {
+            background: linear-gradient(45deg, #FF69B4, #DA70D6);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 8px 25px rgba(255, 105, 180, 0.4);
+            margin-bottom: 0.75rem;
+        }
+
+        .start-designing-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 12px 35px rgba(255, 105, 180, 0.6);
+        }
+
+        /* Ghost Input Container */
+        .input-container {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 105, 180, 0.2);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            max-width: 600px;
+            width: 100%;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .input-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 105, 180, 0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .main-input {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid rgba(255, 105, 180, 0.3);
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            color: white;
+            transition: all 0.3s ease;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .main-input::placeholder {
+            color: rgba(255, 105, 180, 0.8);
+            opacity: 0.9;
+            transition: opacity 0.3s ease;
+        }
+
+        .main-input:focus {
+            border-color: #FF69B4;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.3);
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-start;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-secondary {
+            background: rgba(0, 0, 0, 0.05);
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #FF69B4, #DA70D6);
+            color: white;
+            margin-left: auto;
+            box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(45deg, #DA70D6, #BA55D3);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(255, 105, 180, 0.6);
+        }
+
+        /* Animation Container */
+        .animation-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 500px;
+            margin: 0 auto 2rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        /* Background Animation Elements */
+        .background-animations {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .background-animations .particles {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            --size: 20;
+            width: calc(var(--size) * 20px);
+            height: calc(var(--size) * 20px);
+            opacity: 0.3;
+        }
+
+        .background-animations .particles div {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: rgba(255, 105, 180, 0.4);
+            border-radius: 50%;
+            will-change: transform;
+        }
+
+        .background-animations .floating-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0.2;
+        }
+
+        .background-animations .morphing-shape {
+            position: absolute;
+            background: linear-gradient(45deg, rgba(255, 105, 180, 0.3), rgba(218, 112, 214, 0.3));
+            border-radius: 50%;
+            animation: morphShape 3s ease-in-out infinite;
+            opacity: 0.4;
+        }
+
+        /* Subtle morphing component in background */
+        .background-morph-component {
+            position: fixed;
+            top: 20%;
+            right: 10%;
+            width: 200px;
+            height: 140px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            opacity: 0.6;
+            z-index: 2;
+            pointer-events: none;
+            transform: scale(0.8);
+        }
+
+        /* Background grid stagger */
+        .background-grid {
+            position: fixed;
+            top: 30%;
+            left: 10%;
+            width: 150px;
+            height: 150px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 1px;
+            z-index: 2;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .background-grid div {
+            background: rgba(255, 105, 180, 0.3);
+            border-radius: 50%;
+            transform: scale(0);
+        }
+
+        /* Background SVG patterns */
+        .background-svg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        .particles {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            --size: 20;
+            width: calc(var(--size) * 20px);
+            height: calc(var(--size) * 20px);
+        }
+
+        .particles div {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 105, 180, 0.5);
+            border-radius: 50%;
+            will-change: transform;
+        }
+
+        .fireflies {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+        }
+
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(255, 105, 180, 0.6);
+            border-radius: 50%;
+            will-change: transform;
+        }
+
+        #circle {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 105, 180, 0.3) 0%, transparent 70%);
+            pointer-events: none;
+            opacity: 0.4;
+            will-change: transform;
+        }
+
+        .floating-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .shape {
+            position: absolute;
+            opacity: 0.1;
+            will-change: transform;
+        }
+
+        .shape svg {
+            width: 100px;
+            height: 100px;
+            fill: rgba(255, 105, 180, 0.2);
+        }
+
+        /* Hero Enhancements */
+        .hero {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(255, 105, 180, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .hero > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Star burst effects */
+        .star-burst {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #FF69B4, transparent);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        /* Floating animation for preview */
+        @keyframes float {
+            0%, 100% { 
+                transform: translateY(0px);
+            }
+            50% { 
+                transform: translateY(-8px);
+            }
+        }
+
+
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .input-container {
+                margin: 0 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Animations -->
+    <div class="background-animations">
+        <div class="floating-shapes"></div>
+        <div class="particles"></div>
+    </div>
+    
+    <!-- Background Grid Animation -->
+    <div class="background-grid"></div>
+    
+    <!-- Background SVG Patterns -->
+    <svg class="background-svg">
+        <!-- SVG paths will be added by JavaScript -->
+    </svg>
+    
+    <!-- Background Morphing Component -->
+    <div class="background-morph-component"></div>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="logo">Agently</a>
+            <ul class="nav-links">
+                <li><a href="#examples">Examples</a></li>
+                <li><a href="#pricing">Pricing</a></li>
+                <li><a href="#docs">Docs</a></li>
+                <li><a href="#community">Community</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1 id="hero-title">Build Something Agently</h1>
+        <p>Turn your ideas into designs.</p>
+        
+        <button class="start-designing-btn">Start Designing</button>
+    </section>
+
+    <!-- AI Design Animation Container -->
+    <div class="animation-container" id="animation-container">
+        <!-- Particle system for cursor following -->
+        <div class="particles"></div>
+        
+        <!-- Fireflies effect -->
+        <div class="fireflies" id="animation-wrapper">
+            <div id="circle"></div>
+        </div>
+        
+        <!-- Floating shapes -->
+        <div class="floating-shapes">
+            <div class="shape">
+                <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="30" />
+                </svg>
+            </div>
+            <div class="shape">
+                <svg viewBox="0 0 100 100">
+                    <rect x="25" y="25" width="50" height="50" />
+                </svg>
+            </div>
+            <div class="shape">
+                <svg viewBox="0 0 100 100">
+                    <polygon points="50,15 85,75 15,75" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include the new animation system -->
+    <script src="design-animations.js"></script>
+
+    <script>
+        // Utility functions
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // Animation system integration
+        let currentAnimationController = null;
+        let isAnimating = false;
+
+                // Old functions removed - using simpler morphing system now
+
+                         // Typewriter function removed - title updates happen in morphing animation
+
+        // Old complex functions removed - using simple system now
+        
+        // Advanced auto-morphing animation system inspired by anime.js examples
+        function startAutoMorphing() {
+            console.log('Starting background morphing animation system...');
+            
+            const container = document.getElementById('animation-container');
+            const backgroundMorphComponent = document.querySelector('.background-morph-component');
+            const backgroundGrid = document.querySelector('.background-grid');
+            const backgroundSvg = document.querySelector('.background-svg');
+            
+            // Create star burst particle system (inspired by timeline-50K-stars)
+            function createStarBurst(x, y) {
+                for (let i = 0; i < 8; i++) {
+                    const star = document.createElement('div');
+                    star.style.cssText = `
+                        position: fixed;
+                        left: ${x}px;
+                        top: ${y}px;
+                        width: 3px;
+                        height: 3px;
+                        background: rgba(255, 215, 0, 0.6);
+                        border-radius: 50%;
+                        pointer-events: none;
+                        z-index: 3;
+                    `;
+                    document.body.appendChild(star);
+                    
+                    // Animate star burst
+                    if (window.anime) {
+                        anime({
+                            targets: star,
+                            translateX: anime.random(-150, 150),
+                            translateY: anime.random(-150, 150),
+                            scale: [1, 0],
+                            opacity: [1, 0],
+                            duration: 1000,
+                            easing: 'easeOutCubic',
+                            complete: () => star.remove()
+                        });
+                    }
+                }
+            }
+            
+            // Create grid stagger elements (inspired by advanced-grid-staggering)
+            function createGridStagger() {
+                // Create grid dots directly in background grid
+                for (let i = 0; i < 64; i++) {
+                    const dot = document.createElement('div');
+                    dot.style.cssText = `
+                        background: rgba(255, 105, 180, 0.3);
+                        border-radius: 50%;
+                        width: 100%;
+                        height: 100%;
+                        transform: scale(0);
+                    `;
+                    backgroundGrid.appendChild(dot);
+                }
+                
+                return backgroundGrid;
+            }
+            
+            // Enhanced SVG line drawing background (inspired by svg-line-drawing)
+            function createSVGBackground() {
+                // Create animated paths directly in background SVG
+                for (let i = 0; i < 6; i++) {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const d = `M${100 + i * 120},100 Q${150 + i * 120},300 ${200 + i * 120},100 T${300 + i * 120},100`;
+                    path.setAttribute('d', d);
+                    path.setAttribute('stroke', 'rgba(255, 105, 180, 0.3)');
+                    path.setAttribute('stroke-width', '1');
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke-dasharray', '300');
+                    path.setAttribute('stroke-dashoffset', '300');
+                    backgroundSvg.appendChild(path);
+                    
+                    // Animate path drawing
+                    if (window.anime) {
+                        anime({
+                            targets: path,
+                            strokeDashoffset: [300, 0],
+                            duration: 3000,
+                            delay: i * 400,
+                            easing: 'easeOutExpo',
+                            loop: true,
+                            direction: 'alternate'
+                        });
+                    }
+                }
+            }
+            
+            // Create prompt display area with enhanced typewriter
+            const promptArea = document.createElement('div');
+            promptArea.className = 'prompt-area';
+            promptArea.style.cssText = `
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                right: 20px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                padding: 15px 20px;
+                backdrop-filter: blur(10px);
+                z-index: 100;
+            `;
+            
+            const promptText = document.createElement('div');
+            promptText.style.cssText = `
+                color: #FF69B4;
+                font-size: 14px;
+                font-weight: 500;
+                margin-bottom: 5px;
+                opacity: 0.8;
+            `;
+            promptText.textContent = 'AI Prompt:';
+            
+            const promptInput = document.createElement('div');
+            promptInput.className = 'prompt-input';
+            promptInput.style.cssText = `
+                color: white;
+                font-size: 16px;
+                font-family: 'SF Mono', Monaco, monospace;
+                min-height: 20px;
+            `;
+            
+            // Add cursor for typewriter effect
+            const cursor = document.createElement('span');
+            cursor.className = 'typewriter-cursor';
+            cursor.textContent = '|';
+            cursor.style.cssText = `
+                animation: blink 1s infinite;
+                color: #FF69B4;
+            `;
+            
+            promptArea.appendChild(promptText);
+            promptArea.appendChild(promptInput);
+            promptArea.appendChild(cursor);
+            container.appendChild(promptArea);
+            
+            // Add CSS for cursor blink
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes blink {
+                    0%, 50% { opacity: 1; }
+                    51%, 100% { opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Initialize background effects
+            createSVGBackground();
+            const gridStagger = createGridStagger();
+            
+            // Use background morphing component
+            const morphBox = backgroundMorphComponent;
+            
+            // Keep main component in main container for the typewriter demo
+            const mainMorphBox = document.createElement('div');
+            mainMorphBox.className = 'morph-component';
+            mainMorphBox.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) scale(0);
+                width: 400px;
+                height: 280px;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 
+                    0 25px 50px rgba(0,0,0,0.15),
+                    0 0 0 1px rgba(255,255,255,0.1),
+                    inset 0 1px 0 rgba(255,255,255,0.1);
+                padding: 0;
+                text-align: center;
+                z-index: 50;
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                opacity: 0;
+                transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+                overflow: hidden;
+            `;
+            
+            container.appendChild(mainMorphBox);
+            
+            // Enhanced designs with more complex layouts
+            let designIndex = 0;
+            const designs = [
+                {
+                    prompt: 'Create a modern landing page hero section with navigation',
+                    title: 'Landing Page Hero',
+                    layout: `
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100%; padding: 25px; color: white; position: relative; overflow: hidden;">
+                            <div style="position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%; transform: rotate(45deg);"></div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 12px;">
+                                <div style="font-weight: bold;">LOGO</div>
+                                <div>Home • About • Contact</div>
+                            </div>
+                            <div style="text-align: center; margin-top: 30px;">
+                                <h2 style="font-size: 24px; margin-bottom: 8px; font-weight: 700;">Welcome to Our Platform</h2>
+                                <p style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;">Transform your ideas into reality with cutting-edge technology</p>
+                                <button style="background: white; color: #667eea; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">Get Started</button>
+                            </div>
+                        </div>
+                    `,
+                    color: 'white'
+                },
+                {
+                    prompt: 'Design an e-commerce product card with ratings and pricing',
+                    title: 'Product Showcase',
+                    layout: `
+                        <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); height: 100%; padding: 25px; color: white; position: relative;">
+                            <div style="text-align: center;">
+                                <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 12px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 32px;">🎧</div>
+                                <h3 style="font-size: 20px; margin-bottom: 8px; font-weight: 600;">Premium Headphones</h3>
+                                <div style="font-size: 24px; font-weight: bold; color: #FFD700; margin-bottom: 8px;">$299.99</div>
+                                <div style="font-size: 16px; margin-bottom: 4px;">⭐⭐⭐⭐⭐</div>
+                                <div style="font-size: 12px; opacity: 0.8; margin-bottom: 15px;">4.9/5 (2,847 reviews)</div>
+                                <button style="background: white; color: #4facfe; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; margin-right: 8px;">Add to Cart</button>
+                                <button style="background: rgba(255,255,255,0.2); color: white; padding: 10px 16px; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px;">♡</button>
+                            </div>
+                        </div>
+                    `,
+                    color: 'white'
+                },
+                {
+                    prompt: 'Build an analytics dashboard with metrics and charts',
+                    title: 'Analytics Dashboard',
+                    layout: `
+                        <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); height: 100%; padding: 20px; color: white;">
+                            <h3 style="font-size: 18px; margin-bottom: 15px; font-weight: 600;">Analytics Dashboard</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+                                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 24px; font-weight: bold;">12.5K</div>
+                                    <div style="font-size: 11px; opacity: 0.8;">Total Users</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 24px; font-weight: bold;">89%</div>
+                                    <div style="font-size: 11px; opacity: 0.8;">Success Rate</div>
+                                </div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 36px; margin-bottom: 8px;">📊</div>
+                                <div style="font-size: 14px; color: #4ade80; font-weight: bold;">↗ 23% increase</div>
+                                <div style="font-size: 12px; opacity: 0.7;">vs last month</div>
+                            </div>
+                        </div>
+                    `,
+                    color: 'white'
+                },
+                {
+                    prompt: 'Create a portfolio gallery showcasing creative work',
+                    title: 'Portfolio Gallery',
+                    layout: `
+                        <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); height: 100%; padding: 20px; color: white;">
+                            <h3 style="font-size: 18px; margin-bottom: 15px; font-weight: 600; text-align: center;">Creative Portfolio</h3>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px;">
+                                <div style="aspect-ratio: 1; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🎨</div>
+                                <div style="aspect-ratio: 1; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🖼️</div>
+                                <div style="aspect-ratio: 1; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">📱</div>
+                                <div style="aspect-ratio: 1; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">💻</div>
+                                <div style="aspect-ratio: 1; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🎭</div>
+                                <div style="aspect-ratio: 1; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🎪</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <button style="background: white; color: #fa709a; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; font-size: 12px;">View All Projects</button>
+                            </div>
+                        </div>
+                    `,
+                    color: 'white'
+                },
+                {
+                    prompt: 'Design a contact form with modern styling',
+                    title: 'Contact Form',
+                    layout: `
+                        <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); height: 100%; padding: 20px; color: #333;">
+                            <h3 style="font-size: 18px; margin-bottom: 15px; font-weight: 600; text-align: center; color: #2d3748;">Get In Touch</h3>
+                            <div style="space-y: 8px;">
+                                <input style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.7); margin-bottom: 8px; font-size: 12px;" placeholder="Your Name" />
+                                <input style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.7); margin-bottom: 8px; font-size: 12px;" placeholder="Email Address" />
+                                <textarea style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; background: rgba(255,255,255,0.7); height: 60px; resize: none; margin-bottom: 12px; font-size: 12px;" placeholder="Your Message"></textarea>
+                                <button style="width: 100%; background: #4299e1; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Send Message</button>
+                            </div>
+                        </div>
+                    `,
+                    color: '#333'
+                }
+            ];
+            
+            // Enhanced typewriter effect with irregular timing (inspired by irregular-playback-typewriter)
+            function typePrompt(text, callback) {
+                let charIndex = 0;
+                promptInput.textContent = '';
+                cursor.style.display = 'inline';
+                
+                function type() {
+                    if (charIndex < text.length) {
+                        promptInput.textContent += text.charAt(charIndex);
+                        charIndex++;
+                        // Irregular timing for more realistic typing
+                        const delay = charIndex % 3 === 0 ? 80 + Math.random() * 60 : 30 + Math.random() * 40;
+                        setTimeout(type, delay);
+                    } else {
+                        cursor.style.display = 'none';
+                        if (callback) setTimeout(callback, 1000);
+                    }
+                }
+                type();
+            }
+            
+            // Grid stagger animation function
+            function animateGridStagger() {
+                const dots = gridStagger.querySelectorAll('div');
+                if (window.anime) {
+                    anime({
+                        targets: gridStagger,
+                        opacity: [0, 0.8, 0],
+                        duration: 2000,
+                        easing: 'easeInOutQuad'
+                    });
+                    
+                    anime({
+                        targets: dots,
+                        scale: [0, 1.5, 0],
+                        duration: 800,
+                        delay: anime.stagger(20, {grid: [10, 10], from: 'center'}),
+                        easing: 'easeOutElastic(1, .8)'
+                    });
+                }
+            }
+            
+            // Show initial component with enhanced effects
+            setTimeout(() => {
+                mainMorphBox.style.opacity = '1';
+                mainMorphBox.style.transform = 'translate(-50%, -50%) scale(1)';
+                
+                // Start the morphing cycle
+                let currentDesign = 0;
+                
+                function morphToDesign() {
+                    const design = designs[currentDesign];
+                    
+                    // Create star burst at random background location
+                    createStarBurst(Math.random() * window.innerWidth, Math.random() * window.innerHeight);
+                    
+                    // Animate background grid stagger
+                    animateGridStagger();
+                    
+                    // Type the prompt in main container
+                    typePrompt(design.prompt, () => {
+                        // Enhanced morphing sequence for main container
+                        if (window.anime) {
+                            anime({
+                                targets: mainMorphBox,
+                                scale: [1, 0.9, 1.1, 1],
+                                rotateY: [0, 5, -5, 0],
+                                duration: 800,
+                                easing: 'easeInOutBack',
+                                complete: () => {
+                                    mainMorphBox.innerHTML = design.layout;
+                                    
+                                    // Animate content in with stagger
+                                    const contentElements = mainMorphBox.querySelectorAll('*');
+                                    if (window.anime && contentElements.length > 0) {
+                                        anime({
+                                            targets: contentElements,
+                                            opacity: [0, 1],
+                                            translateY: [20, 0],
+                                            scale: [0.8, 1],
+                                            duration: 600,
+                                            delay: anime.stagger(50),
+                                            easing: 'easeOutExpo'
+                                        });
+                                    }
+                                }
+                            });
+                            
+                            // Subtle background morph animation
+                            anime({
+                                targets: morphBox,
+                                scale: [0.8, 1, 0.8],
+                                opacity: [0.4, 0.8, 0.4],
+                                duration: 2000,
+                                easing: 'easeInOutSine'
+                            });
+                        } else {
+                            mainMorphBox.style.transform = 'translate(-50%, -50%) scale(0.95)';
+                            setTimeout(() => {
+                                mainMorphBox.innerHTML = design.layout;
+                                mainMorphBox.style.transform = 'translate(-50%, -50%) scale(1)';
+                            }, 300);
+                        }
+                        
+                        // Move to next design
+                        currentDesign = (currentDesign + 1) % designs.length;
+                        setTimeout(morphToDesign, 5000); // Increased time to enjoy effects
+                    });
+                }
+                
+                morphToDesign();
+            }, 1000);
+        }
+
+        // Sparkle cursor trail (simplified)
+        let sparkles = [];
+        
+        function createSparkle(x, y) {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'sparkle';
+            sparkle.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: 4px;
+                height: 4px;
+                background: #FF69B4;
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: 1000;
+                opacity: 1;
+                transform: scale(0);
+            `;
+            
+            document.body.appendChild(sparkle);
+            
+            // Animate sparkle
+            sparkle.style.transform = 'scale(1)';
+            sparkle.style.transition = 'all 0.6s ease-out';
+            
+            setTimeout(() => {
+                sparkle.style.opacity = '0';
+                sparkle.style.transform = 'scale(0) translateY(-20px)';
+                setTimeout(() => sparkle.remove(), 600);
+            }, 100);
+        }
+        
+        let lastSparkleTime = 0;
+        document.addEventListener('mousemove', function(e) {
+            const now = Date.now();
+            if (now - lastSparkleTime > 100) {
+                createSparkle(e.clientX, e.clientY);
+                lastSparkleTime = now;
+            }
+        });
+
+
+
+        // Star Burst Effect
+        function createStarBurst(x, y) {
+            const starCount = 12;
+            
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.style.cssText = `
+                    position: fixed;
+                    width: 8px;
+                    height: 8px;
+                    background: radial-gradient(circle, #FF69B4, transparent);
+                    border-radius: 50%;
+                    left: ${x}px;
+                    top: ${y}px;
+                    pointer-events: none;
+                    z-index: 1000;
+                `;
+                
+                document.body.appendChild(star);
+                
+                const angle = (i / starCount) * Math.PI * 2;
+                const distance = random(50, 150);
+                const finalX = x + Math.cos(angle) * distance;
+                const finalY = y + Math.sin(angle) * distance;
+                
+                star.style.transition = 'all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                
+                setTimeout(() => {
+                    star.style.transform = `translate(${finalX - x}px, ${finalY - y}px) scale(0)`;
+                    star.style.opacity = '0';
+                }, 10);
+                
+                setTimeout(() => star.remove(), 1000);
+            }
+        }
+
+        // Enhanced Floating Shapes Animation inspired by additive-creature
+        function createFloatingShapes() {
+            const shapeCount = 12; // More shapes for richer effect
+            const shapes = ['circle', 'square', 'triangle', 'star', 'diamond'];
+            
+            for (let i = 0; i < shapeCount; i++) {
+                const shape = document.createElement('div');
+                const shapeType = shapes[randomInt(0, shapes.length - 1)];
+                const size = random(20, 120);
+                const hue = random(280, 340); // Purple/pink range
+                
+                let shapeCSS = `
+                    position: absolute;
+                    width: ${size}px;
+                    height: ${size}px;
+                    left: ${random(0, 100)}%;
+                    top: ${random(0, 100)}%;
+                    pointer-events: none;
+                    z-index: 1;
+                    filter: blur(${random(0, 2)}px) hue-rotate(${hue}deg);
+                    box-shadow: 0 0 ${random(10, 30)}px rgba(255, 105, 180, ${random(0.3, 0.7)});
+                `;
+                
+                if (shapeType === 'circle') {
+                    shapeCSS += `
+                        background: radial-gradient(circle, rgba(255, 105, 180, ${random(0.2, 0.5)}) 0%, transparent 70%);
+                        border-radius: 50%;
+                    `;
+                } else if (shapeType === 'triangle') {
+                    shapeCSS += `
+                        width: 0;
+                        height: 0;
+                        background: transparent;
+                        border-left: ${size/2}px solid transparent;
+                        border-right: ${size/2}px solid transparent;
+                        border-bottom: ${size}px solid rgba(218, 112, 214, ${random(0.2, 0.4)});
+                    `;
+                } else if (shapeType === 'star') {
+                    shapeCSS += `
+                        background: conic-gradient(from 0deg, rgba(255, 105, 180, ${random(0.3, 0.6)}), transparent 50%);
+                        clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+                    `;
+                } else if (shapeType === 'diamond') {
+                    shapeCSS += `
+                        background: linear-gradient(45deg, rgba(255, 105, 180, ${random(0.3, 0.5)}), rgba(186, 85, 211, ${random(0.2, 0.4)}));
+                        transform: rotate(45deg);
+                    `;
+                } else {
+                    shapeCSS += `background: rgba(255, 105, 180, ${random(0.1, 0.3)});`;
+                }
+                
+                shape.style.cssText = shapeCSS;
+                shape.setAttribute('data-size', size);
+                shape.setAttribute('data-hue', hue);
+                document.querySelector('.background-animations .floating-shapes').appendChild(shape);
+                
+                animateFloatingShape(shape, i);
+            }
+        }
+
+        function animateFloatingShape(shape, index) {
+            const baseSize = parseFloat(shape.getAttribute('data-size'));
+            const baseHue = parseFloat(shape.getAttribute('data-hue'));
+            
+            // Additive creature-style pulsing
+            function pulse() {
+                if (window.anime) {
+                    anime({
+                        targets: shape,
+                        scale: [1, random(1.5, 2.5), 1],
+                        filter: `blur(${random(0, 3)}px) hue-rotate(${random(baseHue - 60, baseHue + 60)}deg)`,
+                        opacity: [0.3, 0.8, 0.3],
+                        duration: random(2000, 4000),
+                        easing: 'easeInOutSine',
+                        complete: () => setTimeout(pulse, random(1000, 3000))
+                    });
+                }
+            }
+            
+            // Enhanced floating movement
+            function float() {
+                const duration = random(4000, 8000);
+                const moveX = random(-200, 200);
+                const moveY = random(-200, 200);
+                const rotation = random(0, 720);
+                const scale = random(0.5, 1.8);
+                
+                if (window.anime) {
+                    anime({
+                        targets: shape,
+                        translateX: moveX,
+                        translateY: moveY,
+                        rotate: rotation,
+                        scale: scale,
+                        duration: duration,
+                        easing: 'easeInOutCubic',
+                        complete: float
+                    });
+                } else {
+                    shape.style.transition = `transform ${duration}ms ease-in-out`;
+                    shape.style.transform = `translate(${moveX}px, ${moveY}px) rotate(${rotation}deg) scale(${scale})`;
+                    setTimeout(float, duration);
+                }
+            }
+            
+            // Start animations with staggered delays
+            setTimeout(() => {
+                float();
+                pulse();
+            }, index * 300);
+        }
+
+        // Mouse Trail Effect
+        function createMouseTrail() {
+            let mouseX = 0, mouseY = 0;
+            
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                
+                if (Math.random() < 0.1) { // Create trail particles occasionally
+                    const trail = document.createElement('div');
+                    trail.style.cssText = `
+                        position: fixed;
+                        width: 4px;
+                        height: 4px;
+                        background: rgba(255, 105, 180, 0.6);
+                        border-radius: 50%;
+                        left: ${mouseX}px;
+                        top: ${mouseY}px;
+                        pointer-events: none;
+                        z-index: 999;
+                        transition: all 1s ease-out;
+                    `;
+                    
+                    document.body.appendChild(trail);
+                    
+                    setTimeout(() => {
+                        trail.style.transform = `translate(${random(-50, 50)}px, ${random(-50, 50)}px) scale(0)`;
+                        trail.style.opacity = '0';
+                    }, 10);
+                    
+                    setTimeout(() => trail.remove(), 1000);
+                }
+            });
+        }
+
+        // Simple fade-in animation for hero text
+        function animateHeroText() {
+            const title = document.getElementById('hero-title');
+            title.style.opacity = '0';
+            title.style.transform = 'translateY(30px)';
+            
+            setTimeout(() => {
+                title.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                title.style.opacity = '1';
+                title.style.transform = 'translateY(0)';
+            }, 100);
+        }
+
+        // Button Click Effects
+        function initButtonEffects() {
+            document.querySelectorAll('.btn-primary').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    // Star burst effect
+                    createStarBurst(e.clientX, e.clientY);
+                    
+                    // Button animation
+                    btn.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        btn.style.transform = 'scale(1)';
+                    }, 150);
+                });
+            });
+        }
+
+
+
+        // Initialize All Animations
+        function initAllAnimations() {
+            console.log('Starting initAllAnimations...');
+            
+            animateHeroText();
+            createFloatingShapes();
+            createMouseTrail();
+            initButtonEffects();
+            
+            // Start the auto morphing animation after a short delay
+            setTimeout(() => {
+                startAutoMorphing();
+            }, 2000);
+            
+            console.log('🎉 All animations initialized!');
+        }
+
+        // Start animations when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initAllAnimations);
+        } else {
+            initAllAnimations();
+        }
+
+                 // Add loaded class for smooth fade-in
+         setTimeout(() => {
+             document.body.classList.add('loaded');
+         }, 100);
+    </script>
+</body>
+</html> 
