@@ -1,0 +1,23 @@
+{
+  "name": "agently",
+  "version": "1.0.0",
+  "description": "The agent who animates your ideas - A beautiful animated landing page",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "build": "echo 'No build step needed for static site'",
+    "start": "python3 -m http.server 8000"
+  },
+  "keywords": [
+    "animation",
+    "landing-page",
+    "ai",
+    "design",
+    "anime.js",
+    "glassmorphism"
+  ],
+  "author": "Renae Wang",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}
